@@ -17,7 +17,8 @@
 import { CommissioningServer, MatterServer } from "@project-chip/matter-node.js";
 
 import { VendorId } from "@project-chip/matter-node.js/datatype";
-import { Aggregator, DeviceTypes, OnOffLightDevice, OnOffPluginUnitDevice } from "@project-chip/matter-node.js/device";
+import { Aggregator, DeviceTypes, OnOffLightDevice, OnOffPluginUnitDevice, ThermostatDevice } from "@project-chip/matter-node.js/device";
+import { AttributeInitialValues, Thermostat } from "@project-chip/matter-node.js/cluster";
 import { Format, Level, Logger } from "@project-chip/matter-node.js/log";
 import { QrCode } from "@project-chip/matter-node.js/schema";
 import { StorageBackendDisk, StorageManager } from "@project-chip/matter-node.js/storage";
@@ -182,6 +183,37 @@ class BridgedDevice {
                 productName: name,
                 productLabel: name,
                 serialNumber: `node-matter-${uniqueId}-${i}`,
+                reachable: true,
+            });
+        }
+
+        if (hasParameter("thermostat")) {
+            const initialAttributeValues: AttributeInitialValues<typeof Thermostat.Complete.attributes> =
+            {
+                localTemperature: 2500,
+                minHeatSetpointLimit: 1000,
+                maxHeatSetpointLimit: 4000,
+                minCoolSetpointLimit: 1000,
+                maxCoolSetpointLimit: 4000,
+                occupiedCoolingSetpoint: 3000,
+                occupiedHeatingSetpoint: 2000,
+                minSetpointDeadBand: 1,
+                controlSequenceOfOperation: Thermostat.ControlSequenceOfOperation.CoolingOnly,
+                systemMode: Thermostat.SystemMode.Cool,
+                thermostatRunningMode: Thermostat.ThermostatRunningMode.Cool,
+            };
+            const device = new ThermostatDevice(undefined, undefined, undefined, initialAttributeValues);
+            device.addOnOffListener(on => logger.info(`thermostat onoff ${on}`));
+            device.addSystemModeListener(mode => logger.info(`thermostat mode ${mode}`));
+            device.addOccupiedCoolingSetpointListener((v: any, o: any) => logger.info(`thermostat temperature ${o} -> ${v}`));
+            device.addOccupiedHeatingSetpointListener((v: any, o: any) => logger.info(`thermostat temperature ${o} -> ${v}`));
+
+            const name = `Thermostat1`;
+            aggregator.addBridgedDevice(device, {
+                nodeLabel: name,
+                productName: name,
+                productLabel: name,
+                serialNumber: `node-matter-${uniqueId}-th`,
                 reachable: true,
             });
         }
